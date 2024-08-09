@@ -2,14 +2,36 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 from PIL import ImageTk, Image, ImageDraw
-import numpy as np
-from scipy.signal import find_peaks
 
 class ImageView:
     def __init__(self, root, controller):
         self.controller = controller
         self.root = root
         self.root.title("Image Processing App")
+
+        # Create a frame for the text boxes (new section)
+        self.info_frame = tk.Frame(root)
+        self.info_frame.pack(side=tk.TOP, fill=tk.X, padx=5, pady=5)
+
+        # Text box labels and default values
+        labels = ["RUN#", "Chip#", "Device", "Electrode Separation (um)", "Electrode Period (um)",
+                  "Electrode Width (um)", "Applied Voltage (mV)"]
+        defaults = ["LN3", "", "", "", "", "", ""]
+
+        # Create and pack text boxes horizontally, allowing wrapping to new lines
+        self.text_entries = {}
+        for label, default in zip(labels, defaults):
+            frame = tk.Frame(self.info_frame)
+            frame.pack(side=tk.LEFT, padx=5, pady=5)
+
+            lbl = tk.Label(frame, text=label)
+            lbl.pack(side=tk.TOP, anchor=tk.W)
+
+            entry = tk.Entry(frame, width=20)
+            entry.insert(0, default)
+            entry.pack(side=tk.TOP, fill=tk.X)
+            
+            self.text_entries[label] = entry
 
         # Canvas to display the image
         self.canvas = tk.Canvas(root, width=600, height=400)

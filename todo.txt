@@ -6,16 +6,12 @@ Created on Wed Aug  7 23:57:05 2024
 """
 
 
-1. make automatic rotation.
-
-
 1.5 make that the line profile excludes some pixels from the edges.
 make this ADJUSTABLE!
 
 
-2. make all the calculations - duty cycle, period, std, 
-period as a function of location data, duty cycle as a function of location.
-Outlier-removed data(?)
+1. make automatic rotation.
+
 
 3. make all the saving functionality.
 insert the Run, chip number, device number(?), 
