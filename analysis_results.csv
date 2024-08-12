@@ -1,0 +1,2 @@
+RUN#,Chip#,Device,Electrode Separation (um),Electrode Period (um),Electrode Width (um),Applied Voltage (mV),Rotation Angle,Image File Name,Mean Odd Region Width (µm),Std Odd Region Width (µm),Mean Even Region Width (µm),Std Even Region Width (µm),Mean Duty Cycle,Std Duty Cycle,Lines Averaged in ROI
+LN3,101,Top 1,15,2.6,0.7,450,1.4,Top 1 - 450mVpp - 62.5us flat 30us ramps.tif,0.9583999999999997,0.05773317936853988,1.8415999999999997,0.053017732882498794,0.34216063608728553,0.016130380441836754,1
