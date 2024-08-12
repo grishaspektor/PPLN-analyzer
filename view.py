@@ -67,7 +67,7 @@ class ImageView:
         self.grid_checkbox.pack(side=tk.LEFT)
 
         # Checkbox to toggle between Single Line and ROI mode
-        self.mode_var = tk.BooleanVar()
+        self.mode_var = tk.BooleanVar(value=True) # default to ROI mode.
         self.mode_checkbox = tk.Checkbutton(self.settings_frame, text="Use ROI", variable=self.mode_var)
         self.mode_checkbox.pack(side=tk.LEFT)
 

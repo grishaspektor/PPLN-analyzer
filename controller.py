@@ -4,6 +4,8 @@ import numpy as np
 import csv
 import os
 from scipy.signal import find_peaks
+from datetime import datetime
+
 
 class ImageController:
     def __init__(self, model, view):
@@ -104,15 +106,21 @@ class ImageController:
         scaled_y1 = int(y1 / self.view.canvas.winfo_height() * self.model.rotated_image.size[1])
         scaled_y2 = int(y2 / self.view.canvas.winfo_height() * self.model.rotated_image.size[1])
         
+        # Calculate the number of lines (pixels) in the ROI
+        lines_averaged = scaled_y2 - scaled_y1
+        
         # Get the edge exclusion values from the view
         start_exclusion = int(self.view.start_exclusion_entry.get())
         end_exclusion = int(self.view.end_exclusion_entry.get())
-
+    
         roi_profile = np.mean(np.array(self.model.rotated_image)[scaled_y1:scaled_y2, start_exclusion:-end_exclusion], axis=0)
         self.line_profile = roi_profile
+        
+        # Store the number of lines averaged
+        self.analysis_results["lines_averaged"] = lines_averaged
+        
         self.plot_line_profile(self.line_profile)
-        # Store the number of lines averaged in the ROI
-        self.analysis_results['lines_averaged'] = scaled_y2 - scaled_y1
+
 
     def plot_line_profile(self, line_profile):
         print("Entering plot_line_profile")
@@ -152,8 +160,8 @@ class ImageController:
                 region_widths_microns = region_widths_pixels  # If no calibration factor, keep it in pixels
     
             # Separate the widths into odd (actively poled) and even (passively poled) regions
-            odd_region_widths = region_widths_microns[::2]  # Corrected: odd -> red
-            even_region_widths = region_widths_microns[1::2]  # Corrected: even -> blue
+            odd_region_widths = region_widths_microns[::2]
+            even_region_widths = region_widths_microns[1::2]
     
             # Truncate to make sure odd and even regions have the same number of elements
             min_length = min(len(odd_region_widths), len(even_region_widths))
@@ -166,22 +174,25 @@ class ImageController:
             even_mean = np.mean(even_region_widths)
             even_std = np.std(even_region_widths)
     
-            # Store calculated quantities for future use
-            self.analysis_results = {
-                "odd_region_widths": odd_region_widths,
-                "even_region_widths": even_region_widths,
-                "odd_mean": odd_mean,
-                "odd_std": odd_std,
-                "even_mean": even_mean,
-                "even_std": even_std,
-                "duty_cycle": odd_region_widths / (odd_region_widths + even_region_widths),
-                "duty_cycle_mean": np.mean(odd_region_widths / (odd_region_widths + even_region_widths)),
-                "duty_cycle_std": np.std(odd_region_widths / (odd_region_widths + even_region_widths)),
-                "minima_indices": minima_indices,
-            }
+            # Plot the line profile with minima marked
+            self.line_profile_fig = plt.figure()
+            x = np.arange(len(self.line_profile))
+            if self.calibration_factor:
+                x_axis = x * self.calibration_factor
+                plt.xlabel("Position (Microns)")
+            else:
+                x_axis = x
+                plt.xlabel("Pixel")
+            plt.plot(x_axis, self.line_profile, label="Raw Line Profile")
+            plt.plot(x_axis[minima_indices], self.line_profile[minima_indices], 'rx', label="Minima")
+            plt.title("Raw Line Profile with Minima")
+            plt.ylabel("Intensity")
+            plt.legend()
+            plt.grid(True)
+            plt.show()
     
             # Plot the widths of odd and even regions
-            plt.figure()
+            self.widths_fig = plt.figure()  # Store the figure reference
             plt.plot(np.arange(1, len(odd_region_widths) + 1), odd_region_widths, 'ro-', 
                      label=r"Actively Poled (Odd) Regions" "\n" r"$\mathbf{Mean:}$ " f"{odd_mean:.2f} µm, " r"$\mathbf{Std:}$ " f"{odd_std:.2f} µm")
             plt.plot(np.arange(1, len(even_region_widths) + 1), even_region_widths, 'bo-', 
@@ -191,24 +202,43 @@ class ImageController:
             plt.title("Region Widths")
             plt.xlabel("Region Number")
             plt.ylabel("Width (Microns)" if self.calibration_factor else "Width (Pixels)")
-            plt.grid(True)  # Add grid
+            plt.grid(True)
             plt.legend()
             plt.show()
     
+            # Redefine duty cycle as odd_region_width / (odd_region_width + even_region_width)
+            duty_cycle = odd_region_widths / (odd_region_widths + even_region_widths)
+    
+            # Calculate the mean and standard deviation of the duty cycle
+            duty_cycle_mean = np.mean(duty_cycle)
+            duty_cycle_std = np.std(duty_cycle)
+    
             # Plot the duty cycle
-            plt.figure()
-            plt.plot(np.arange(1, len(self.analysis_results["duty_cycle"]) + 1), self.analysis_results["duty_cycle"], 'mo-',  # Change to purple
-                     label=r"$\mathbf{Duty\ Cycle}$" "\n" r"$\mathbf{Mean:}$ " f"{self.analysis_results['duty_cycle_mean']:.2f}, " r"$\mathbf{Std:}$ " f"{self.analysis_results['duty_cycle_std']:.2f}")
-            plt.axhline(y=self.analysis_results['duty_cycle_mean'], color='black', linestyle='--')
+            self.duty_cycle_fig = plt.figure()  # Store the figure reference
+            plt.plot(np.arange(1, len(duty_cycle) + 1), duty_cycle, 'mo-',  # Change to purple
+                     label=r"$\mathbf{Duty\ Cycle}$" "\n" r"$\mathbf{Mean:}$ " f"{duty_cycle_mean:.2f}, " r"$\mathbf{Std:}$ " f"{duty_cycle_std:.2f}")
+            plt.axhline(y=duty_cycle_mean, color='black', linestyle='--')
             plt.axhline(y=0.5, color='red', linestyle='--')  # Add a red dashed line at 0.5
-            plt.ylim(0, 1)  # Set the y-axis between 0 and 1
+            plt.ylim(0, 1)
             plt.title("Duty Cycle")
             plt.xlabel("Region Pair Number")
             plt.ylabel("Duty Cycle (Odd / (Odd + Even))")
-            plt.grid(True)  # Add grid
+            plt.grid(True)
             plt.legend()
             plt.show()
     
+            # Store calculated quantities for future use
+            self.analysis_results = {
+                "odd_region_widths": odd_region_widths,
+                "even_region_widths": even_region_widths,
+                "odd_mean": odd_mean,
+                "odd_std": odd_std,
+                "even_mean": even_mean,
+                "even_std": even_std,
+                "duty_cycle": duty_cycle,
+                "duty_cycle_mean": duty_cycle_mean,
+                "duty_cycle_std": duty_cycle_std
+            }
         else:
             print("No line profile available for analysis.")
     
@@ -273,20 +303,21 @@ class ImageController:
         widths_plot_path = os.path.join(self.image_dir, f"{os.path.splitext(self.image_file_name)[0]}_widths.png")
         duty_cycle_plot_path = os.path.join(self.image_dir, f"{os.path.splitext(self.image_file_name)[0]}_duty_cycle.png")
         analysis_data_path = os.path.join(self.image_dir, f"{os.path.splitext(self.image_file_name)[0]}_analysis_data.csv")
-    
+        
         # Check if files already exist for the current image
         if os.path.exists(widths_plot_path) or os.path.exists(duty_cycle_plot_path) or os.path.exists(analysis_data_path):
             overwrite = messagebox.askyesno("File Exists", "The file for this image has already been processed. Do you want to overwrite?")
             if not overwrite:
                 return  # If user chooses not to overwrite, return early
-    
+        
         # Extract data from text boxes
         data = {label: entry.get() for label, entry in self.view.text_entries.items()}
-    
+        
         # Add additional data
         data["Rotation Angle"] = self.rotation_angle
         data["Image File Name"] = self.image_file_name
-    
+        data["Analysis Date"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")  # Add analysis date
+        
         # Extract analysis results
         if self.analysis_results:
             data.update({
@@ -301,8 +332,8 @@ class ImageController:
         else:
             print("No analysis results to save.")
             return
-    
-        # Save the analysis data
+        
+        # Write the detailed analysis data (region widths and duty cycle) to a CSV file in the image directory
         with open(analysis_data_path, 'w', newline='') as csvfile:
             fieldnames = ["Region Number", "Odd Region Width (µm)", "Even Region Width (µm)", "Duty Cycle"]
             writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -323,68 +354,26 @@ class ImageController:
             writer.writerow({"Region Number": "Mean Duty Cycle", "Duty Cycle": self.analysis_results["duty_cycle_mean"]})
             writer.writerow({"Region Number": "Std Duty Cycle", "Duty Cycle": self.analysis_results["duty_cycle_std"]})
         print(f"Analysis data saved to {analysis_data_path}")
-    
-        # Save the analysis plots
-        plt.figure()
-        plt.plot(np.arange(1, len(self.analysis_results["odd_region_widths"]) + 1), self.analysis_results["odd_region_widths"], 'ro-', 
-                 label=r"Actively Poled (Odd) Regions" "\n" r"$\mathbf{Mean:}$ " f"{self.analysis_results['odd_mean']:.2f} µm, " r"$\mathbf{Std:}$ " f"{self.analysis_results['odd_std']:.2f} µm")
-        plt.plot(np.arange(1, len(self.analysis_results["even_region_widths"]) + 1), self.analysis_results["even_region_widths"], 'bo-', 
-                 label=r"Passively Poled (Even) Regions" "\n" r"$\mathbf{Mean:}$ " f"{self.analysis_results['even_mean']:.2f} µm, " r"$\mathbf{Std:}$ " f"{self.analysis_results['even_std']:.2f} µm")
-        plt.axhline(y=self.analysis_results['odd_mean'], color='black', linestyle='--')
-        plt.axhline(y=self.analysis_results['even_mean'], color='black', linestyle='--')
-        plt.title("Region Widths")
-        plt.xlabel("Region Number")
-        plt.ylabel("Width (Microns)" if self.calibration_factor else "Width (Pixels)")
-        plt.grid(True)
-        plt.legend()
-        plt.savefig(widths_plot_path)
+        
+        # Save the already plotted figures
+        self.widths_fig.savefig(widths_plot_path)
         print(f"Widths plot saved to {widths_plot_path}")
         
-        # Save the duty cycle plot
-        plt.figure()
-        plt.plot(np.arange(1, len(self.analysis_results["duty_cycle"]) + 1), self.analysis_results["duty_cycle"], 'mo-',  # Change to purple
-                 label=r"$\mathbf{Duty\ Cycle}$" "\n" r"$\mathbf{Mean:}$ " f"{self.analysis_results['duty_cycle_mean']:.2f}, " r"$\mathbf{Std:}$ " f"{self.analysis_results['duty_cycle_std']:.2f}")
-        plt.axhline(y=self.analysis_results['duty_cycle_mean'], color='black', linestyle='--')
-        plt.axhline(y=0.5, color='red', linestyle='--')  # Add a red dashed line at 0.5
-        plt.ylim(0, 1)
-        plt.title("Duty Cycle")
-        plt.xlabel("Region Pair Number")
-        plt.ylabel("Duty Cycle (Odd / (Odd + Even))")
-        plt.grid(True)
-        plt.legend()
-        plt.savefig(duty_cycle_plot_path)
+        self.duty_cycle_fig.savefig(duty_cycle_plot_path)
         print(f"Duty cycle plot saved to {duty_cycle_plot_path}")
-    
-        # Write to CSV
+        
+        # Write to the main CSV database
         if not os.path.exists(self.csv_file):
             write_header = True  # File doesn't exist, so write the header
             mode = 'w'  # Create the file
         else:
             write_header = False  # File exists, no need to write header
-            mode = 'r+'  # Open for reading and writing
-    
-        temp_file = "temp_" + self.csv_file  # Temporary file for editing CSV
+            mode = 'a'  # Open in append mode
+        
         with open(self.csv_file, mode, newline='') as csvfile:
-            if mode == 'r+':
-                reader = csv.DictReader(csvfile)
-                existing_data = list(reader)
-                csvfile.seek(0)
-                writer = csv.DictWriter(csvfile, fieldnames=reader.fieldnames)
-            else:
-                existing_data = []
-                writer = csv.DictWriter(csvfile, fieldnames=data.keys())
-    
+            writer = csv.DictWriter(csvfile, fieldnames=data.keys())
             if write_header:
                 writer.writeheader()
-    
-            found = False
-            for row in existing_data:
-                if row["Image File Name"] == self.image_file_name:
-                    writer.writerow(data)  # Replace existing row
-                    found = True
-                else:
-                    writer.writerow(row)
-            if not found:
-                writer.writerow(data)  # If no existing row, add new row
-    
+            writer.writerow(data)
+        
         print("Results saved to", self.csv_file)

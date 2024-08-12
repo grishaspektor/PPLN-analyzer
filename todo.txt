@@ -7,21 +7,17 @@ Created on Wed Aug  7 23:57:05 2024
 
 
 1.5 make that the line profile excludes some pixels from the edges.
-make this ADJUSTABLE!
+make this ADJUSTABLE! - make it with sliders
 
 
 1. make automatic rotation.
 
 
 3. make all the saving functionality.
-insert the Run, chip number, device number(?), 
-Electrode Period, Electrode Separation, Electrode Duty Cycle, Electrode shape(?)
-Description (optional), image path, rotation angle
+insert the Run, chip number, device number(?)
 
-Save button
+Pulse parameters - make a separate menu for that that will have some default values that are changeable from a button.
 
-
-These values should default to something.
 
 Think of storing some sort of processing file that if an already processed image is loaded - it loads the: rotation angle - what else?
 
