@@ -5,6 +5,7 @@ import csv
 import os
 from scipy.signal import find_peaks
 from datetime import datetime
+import configparser
 
 
 class ImageController:
@@ -21,7 +22,33 @@ class ImageController:
         self.image_file_name = None  # Store the image file name
         self.rotation_angle = 0  # Store the current rotation angle
         self.image_dir = None  # Directory where the image is located
+        self.config_file = "config.ini"  # Configuration file to store settings
+        self.csv_file = self.load_database_location()  # Load the stored database location
 
+    
+    def load_database_location(self):
+        config = configparser.ConfigParser()
+        if os.path.exists(self.config_file):  # Check if the config file exists
+            config.read(self.config_file)
+        if "Database" in config and "file" in config["Database"]:
+            return config["Database"]["file"]
+        else:
+            return "analysis_results.csv"  # Default file name
+
+    def save_database_location(self, file_path):
+        config = configparser.ConfigParser()
+        config["Database"] = {"file": file_path}
+        with open(self.config_file, 'w') as configfile:
+            config.write(configfile)
+        self.csv_file = file_path
+
+    def select_database_location(self):
+        file_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV files", "*.csv"), ("All files", "*.*")])
+        if file_path:
+            self.save_database_location(file_path)
+            messagebox.showinfo("Database Location", f"Database location set to: {file_path}")
+
+    
     def load_image(self):
         file_path = filedialog.askopenfilename(filetypes=[("TIFF files", "*.tif"), ("All files", "*.*")])
         if file_path:
@@ -108,6 +135,7 @@ class ImageController:
         
         # Calculate the number of lines (pixels) in the ROI
         lines_averaged = scaled_y2 - scaled_y1
+        print(f" The number of vertical pixels in ROI is: {lines_averaged}")
         
         # Get the edge exclusion values from the view
         start_exclusion = int(self.view.start_exclusion_entry.get())
@@ -117,9 +145,15 @@ class ImageController:
         self.line_profile = roi_profile
         
         # Store the number of lines averaged
-        self.analysis_results["lines_averaged"] = lines_averaged
+        self.lines_averaged_in_ROI = lines_averaged
         
         self.plot_line_profile(self.line_profile)
+        
+        # sanity check:
+        import matplotlib.pyplot as plt
+        plt.imshow(self.model.rotated_image,cmap='gray')
+        plt.plot([start_exclusion, self.model.rotated_image.size[0]-end_exclusion], [scaled_y1, scaled_y1], color='green', linestyle='-', linewidth=1)  # Line at y1
+        plt.plot([start_exclusion, self.model.rotated_image.size[0]-end_exclusion], [scaled_y2, scaled_y2], color='red', linestyle='-', linewidth=1)  # Line at y2
 
 
     def plot_line_profile(self, line_profile):
@@ -237,7 +271,8 @@ class ImageController:
                 "even_std": even_std,
                 "duty_cycle": duty_cycle,
                 "duty_cycle_mean": duty_cycle_mean,
-                "duty_cycle_std": duty_cycle_std
+                "duty_cycle_std": duty_cycle_std,
+                "lines_averaged": self.lines_averaged_in_ROI
             }
         else:
             print("No line profile available for analysis.")
@@ -310,8 +345,8 @@ class ImageController:
             if not overwrite:
                 return  # If user chooses not to overwrite, return early
         
-        # Extract data from text boxes
-        data = {label: entry.get() for label, entry in self.view.text_entries.items()}
+        # Extract data from text boxes (excluding Description for now)
+        data = {label: entry.get() for label, entry in self.view.text_entries.items() if label != "Description"}
         
         # Add additional data
         data["Rotation Angle"] = self.rotation_angle
@@ -327,11 +362,14 @@ class ImageController:
                 "Std Even Region Width (µm)": self.analysis_results["even_std"],
                 "Mean Duty Cycle": self.analysis_results["duty_cycle_mean"],
                 "Std Duty Cycle": self.analysis_results["duty_cycle_std"],
-                "Lines Averaged in ROI": self.analysis_results.get("lines_averaged", 1)
+                "Lines Averaged in ROI": self.analysis_results["lines_averaged"]
             })
         else:
             print("No analysis results to save.")
             return
+        
+        # Add the Description field last
+        data["Description"] = self.view.text_entries["Description"].get()
         
         # Write the detailed analysis data (region widths and duty cycle) to a CSV file in the image directory
         with open(analysis_data_path, 'w', newline='') as csvfile:

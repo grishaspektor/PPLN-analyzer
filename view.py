@@ -2,6 +2,9 @@ import tkinter as tk
 from tkinter import filedialog
 from tkinter import ttk
 from PIL import ImageTk, Image, ImageDraw
+import matplotlib.pyplot as plt
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import numpy as np
 
 class ImageView:
     def __init__(self, root, controller):
@@ -15,8 +18,11 @@ class ImageView:
 
         # Text box labels and default values
         labels = ["RUN#", "Chip#", "Device", "Electrode Separation (um)", "Electrode Period (um)",
-                  "Electrode Width (um)", "Applied Voltage (mV)"]
-        defaults = ["LN3", "", "", "", "", "", ""]
+                  "Electrode Width (um)", "Applied Voltage (mV)",
+                  "Ramp Up Duration (ms)", "Ramp Down Duration (ms)", "Flat Duration (ms)"]  # Added pulse parameters
+
+        defaults = ["LN3", "", "", "", "", "", "", "0.03", "0.03", "0.0625"]  # Added default values for pulse parameters
+
 
         # Create and pack text boxes horizontally, allowing wrapping to new lines
         self.text_entries = {}
@@ -32,9 +38,19 @@ class ImageView:
             entry.pack(side=tk.TOP, fill=tk.X)
             
             self.text_entries[label] = entry
+        
+        # Add a long text input for Description
+        description_frame = tk.Frame(root)
+        description_frame.pack(fill=tk.X, padx=5, pady=5)
+        description_label = tk.Label(description_frame, text="Description:")
+        description_label.pack(side=tk.LEFT)
+        self.description_entry = tk.Entry(description_frame, width=100)
+        self.description_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+        self.text_entries["Description"] = self.description_entry
+
 
         # Canvas to display the image
-        self.canvas = tk.Canvas(root, width=600, height=400)
+        self.canvas = tk.Canvas(root, width=800, height=600)
         self.canvas.pack()
 
         # Frame to hold the buttons horizontally
@@ -56,6 +72,8 @@ class ImageView:
         # Button to analyze poling
         self.analyze_poling_button = tk.Button(self.button_frame, text="Analyze Poling", command=self.controller.analyze_poling)
         self.analyze_poling_button.pack(side=tk.LEFT)
+        
+
 
         # Frame to hold checkboxes and nominal period text box horizontally
         self.settings_frame = tk.Frame(root)
@@ -115,9 +133,22 @@ class ImageView:
         self.rotation_entry.pack(side=tk.LEFT)
         self.rotation_entry.bind("<Return>", self.controller.update_rotation_slider)
 
-        # Add a save button at the bottom right
-        self.save_button = tk.Button(root, text="Save Results", command=self.controller.save_results)
-        self.save_button.pack(side=tk.BOTTOM, anchor=tk.SE, padx=10, pady=10)
+        # # Add a save button at the bottom right
+        # self.save_button = tk.Button(root, text="Save Results", command=self.controller.save_results)
+        # self.save_button.pack(side=tk.BOTTOM, anchor=tk.SE, padx=10, pady=10)
+        
+        # Frame to hold the buttons horizontally, aligned to the left
+        self.button_frame = tk.Frame(root)
+        self.button_frame.pack(fill=tk.X)
+        
+        # Button to select database location, aligned to the left
+        self.db_button = tk.Button(self.button_frame, text="Select Database Location", command=self.controller.select_database_location)
+        self.db_button.pack(side=tk.LEFT, padx=5, pady=5)
+        
+        # Button to save results, aligned to the right
+        self.save_button = tk.Button(self.button_frame, text="Save Results", command=self.controller.save_results)
+        self.save_button.pack(side=tk.RIGHT, padx=5, pady=5)
+
 
         self.tk_image = None
         self.original_image = None  # Store the original image separately
@@ -128,8 +159,8 @@ class ImageView:
 
     def display_image(self, image):
         # Maximum dimensions for the image
-        max_width = 800
-        max_height = 600
+        max_width = 1400
+        max_height = 1200
 
         # Calculate the scaling factor to maintain aspect ratio
         width, height = image.size
@@ -154,7 +185,7 @@ class ImageView:
             self.draw_calibration_lines()
 
         print(f"Image displayed with size: {display_image.size}")
-
+    
     def draw_grid(self):
         self.grid_image = self.original_image.copy()  # Copy the original image for grid overlay
         draw = ImageDraw.Draw(self.grid_image)
@@ -208,6 +239,11 @@ class ImageView:
             self.canvas.create_line(line[0], line[1], line[2], line[3], fill="yellow", dash=(4, 4))
 
     def update_calibration_lines(self, y1, y2):
+        
+        rotated_width = self.original_image.size[0]
+        display_width = self.canvas.winfo_width()
+        scale_x = display_width / rotated_width
+        
         self.calibration_lines = [
             (20, y1, self.canvas.winfo_width() - 20, y1),
             (20, y2, self.canvas.winfo_width() - 20, y2)
@@ -219,19 +255,26 @@ class ImageView:
             self.canvas.create_line(line[0], line[1], line[2], line[3], fill="red")
 
     def update_profile_lines(self, y1, y2=None):
+        
+        rotated_width = self.original_image.size[0]
+        display_width = self.canvas.winfo_width()
+        scale_x = display_width / rotated_width
+        
         canvas_width = self.canvas.winfo_width()
-        start_exclusion = int(self.start_exclusion_entry.get())
-        end_exclusion = int(self.end_exclusion_entry.get())
+        start_exclusion = int(int(self.start_exclusion_entry.get()) * scale_x)
+        end_exclusion = int(int(self.end_exclusion_entry.get()) * scale_x)
+        print(f"the scale is: {scale_x}")
         if y2 is None:
             self.profile_lines = [
                 (start_exclusion, y1, canvas_width - end_exclusion, y1)
             ]
         else:
             self.profile_lines = [
-                (start_exclusion, y1, canvas_width - end_exclusion, y1),
-                (start_exclusion, y2, canvas_width - end_exclusion, y2)
+                (start_exclusion, y1, (canvas_width - end_exclusion), y1), #manual brute force factor...
+                (start_exclusion, y2, (canvas_width - end_exclusion), y2)
             ]
         self.draw_profile_lines()
+
 
     def update_edge_exclusion(self, event):
         # Update the profile lines based on new edge exclusion values
