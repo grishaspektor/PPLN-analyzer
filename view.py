@@ -85,6 +85,25 @@ class ImageView:
         self.calibration_factor_entry = tk.Entry(self.settings_frame, textvariable=self.calibration_factor_value, state='readonly', width=10)
         self.calibration_factor_entry.pack(side=tk.LEFT)
 
+        # Frame to hold edge exclusion settings
+        self.exclusion_frame = tk.Frame(root)
+        self.exclusion_frame.pack()
+
+        # Text boxes for edge exclusion
+        self.start_exclusion_label = tk.Label(self.exclusion_frame, text="Start Exclusion (pixels):")
+        self.start_exclusion_label.pack(side=tk.LEFT)
+        self.start_exclusion_entry = tk.Entry(self.exclusion_frame, width=5)
+        self.start_exclusion_entry.pack(side=tk.LEFT)
+        self.start_exclusion_entry.insert(0, "20")  # Default value
+        self.start_exclusion_entry.bind("<KeyRelease>", self.update_edge_exclusion)
+
+        self.end_exclusion_label = tk.Label(self.exclusion_frame, text="End Exclusion (pixels):")
+        self.end_exclusion_label.pack(side=tk.LEFT)
+        self.end_exclusion_entry = tk.Entry(self.exclusion_frame, width=5)
+        self.end_exclusion_entry.pack(side=tk.LEFT)
+        self.end_exclusion_entry.insert(0, "20")  # Default value
+        self.end_exclusion_entry.bind("<KeyRelease>", self.update_edge_exclusion)
+
         # Slider and entry box for rotation
         self.rotation_frame = tk.Frame(root)
         self.rotation_frame.pack()
@@ -95,6 +114,10 @@ class ImageView:
         self.rotation_entry = tk.Entry(self.rotation_frame, width=5)
         self.rotation_entry.pack(side=tk.LEFT)
         self.rotation_entry.bind("<Return>", self.controller.update_rotation_slider)
+
+        # Add a save button at the bottom right
+        self.save_button = tk.Button(root, text="Save Results", command=self.controller.save_results)
+        self.save_button.pack(side=tk.BOTTOM, anchor=tk.SE, padx=10, pady=10)
 
         self.tk_image = None
         self.original_image = None  # Store the original image separately
@@ -195,15 +218,24 @@ class ImageView:
         for line in self.profile_lines:
             self.canvas.create_line(line[0], line[1], line[2], line[3], fill="red")
 
-    def update_profile_lines(self, y1, y2=None, edge_exclusion=20):
+    def update_profile_lines(self, y1, y2=None):
         canvas_width = self.canvas.winfo_width()
+        start_exclusion = int(self.start_exclusion_entry.get())
+        end_exclusion = int(self.end_exclusion_entry.get())
         if y2 is None:
             self.profile_lines = [
-                (edge_exclusion, y1, canvas_width - edge_exclusion, y1)
+                (start_exclusion, y1, canvas_width - end_exclusion, y1)
             ]
         else:
             self.profile_lines = [
-                (edge_exclusion, y1, canvas_width - edge_exclusion, y1),
-                (edge_exclusion, y2, canvas_width - edge_exclusion, y2)
+                (start_exclusion, y1, canvas_width - end_exclusion, y1),
+                (start_exclusion, y2, canvas_width - end_exclusion, y2)
             ]
         self.draw_profile_lines()
+
+    def update_edge_exclusion(self, event):
+        # Update the profile lines based on new edge exclusion values
+        if self.profile_lines:
+            y1 = self.profile_lines[0][1]
+            y2 = self.profile_lines[1][1] if len(self.profile_lines) > 1 else None
+            self.update_profile_lines(y1, y2)
