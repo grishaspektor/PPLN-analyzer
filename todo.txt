@@ -6,39 +6,9 @@ Created on Wed Aug  7 23:57:05 2024
 """
 
 
-1. make automatic rotation.
+1. Consider removing the gradient in the image first and see if it has an effect on the std of the dark side
 
 
-1.5 make that the line profile excludes some pixels from the edges.
-make this ADJUSTABLE!
 
+2. make some plotting functionality? perhaps there is a library that allows to load a csv file and manage data? 
 
-2. make all the calculations - duty cycle, period, std, 
-period as a function of location data, duty cycle as a function of location.
-Outlier-removed data(?)
-
-3. make all the saving functionality.
-insert the Run, chip number, device number(?), 
-Electrode Period, Electrode Separation, Electrode Duty Cycle, Electrode shape(?)
-Description (optional), image path, rotation angle
-
-Save button
-
-
-These values should default to something.
-
-Think of storing some sort of processing file that if an already processed image is loaded - it loads the: rotation angle - what else?
-
-
-keep account on how many lines is the period averaged.
-Average over ROI or make statistics over #N line scans?
-
-Add a "this image has been analyzed" notice somehow.
-
-
-Make sure that the order of operations is somehow enforced:
-1. load image.
-2. rotate.
-3. calibrate microns per pixel
-4. get period
-By adding arrows between the buttons?

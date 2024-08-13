@@ -1,0 +1,2 @@
+RUN#,Chip#,Device,Electrode Separation (um),Electrode Period (um),Electrode Width (um),Applied Voltage (mV),Ramp Up Duration (ms),Ramp Down Duration (ms),Flat Duration (ms),Rotation Angle,Image File Name,Analysis Date,Mean Odd Region Width (µm),Std Odd Region Width (µm),Mean Even Region Width (µm),Std Even Region Width (µm),Mean Duty Cycle,Std Duty Cycle,Lines Averaged in ROI
+LN3,1,1,1,1,1,1,0.03,0.03,0.0625,1.4,top 2 - 460mV.tif,2024-08-12 11:17:50,1.558003597122302,0.08758600400410421,1.2421537769784172,0.0746117565680893,0.5563419242124876,0.022698475201786087,1
