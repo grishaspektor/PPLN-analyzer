@@ -10,6 +10,7 @@
 - [Usage](#usage)
   - [Loading Images](#loading-images)
   - [Rotating Images](#rotating-images)
+  - [Calibrating pixels to microns](#Calibrating-pixels-to-microns)
   - [Selecting Regions of Interest (ROI)](#selecting-regions-of-interest-roi)
   - [Analyzing Poling Patterns](#analyzing-poling-patterns)
   - [Saving Results](#saving-results)
@@ -54,19 +55,33 @@ pip install -r requirements.txt
 - Use the **Rotate Image** slider or text box to manually rotate the image.
 - Click **Auto Rotate** to automatically align the image based on the detected poling pattern.
 
+### Calibrating pixels to microns
+
+- Edit the nominal Electrode Period (microns) textbox of a known region.
+- Click the "choose calibration region" and then click on the top and bottom of the regions containing the electrodes with the said period.
+- The calibration factor is calculated and updated in the GUI. It is assumed that the dark regions are the electrodes.
 ### Selecting Regions of Interest (ROI)
 
-- Click **Select Poling ROI** to manually select a region of interest for analysis.
-- Draw lines on the image to define the ROI.
-
+- Click **Select Poling ROI** to manually select a region of interest for analysis. By selecting the top and bottom of the region of interset.
+- Red lines on the image will represent the defined ROI.
+- Adjust exclusion pixels as necessary.
+- The period will be calculated on the vertically averaged horizontal profile of the selected ROI.
+- It is currently assumed that the first dark transition is the first actively poled region. You should chose the start of the ROI lines to start at a passively poled region.
+- The averaged ROI profile will be displayed.
 ### Analyzing Poling Patterns
 
 - After selecting an ROI, click **Analyze Poling** to calculate and display the widths of poled regions, duty cycles, and other metrics.
+- As a current workaround an image of the electrodes overlaid by a green and red line will be presented - this is useful to more accurately determine the actual start and end of the ROI region - due to a problem with the tk display functionality.
 
 ### Saving Results
 
-- Click **Save Results** to export the analysis data and images.
-- You can customize the database location and save multiple analysis results in a single file.
+- You can Select Database Locateion customize the database location for saving the analysis results.
+- This will create a config.ini file on your computer that will point to the location of the database.
+- You should edit the textboxes on the top of the GUI to add the desired information about the analyzed image.
+
+- Click **Save Results** to export the analysis data and images and add a line to the database resutls.
+- The plots and extracted data will be saved alongside the loaded image.
+
 
 ### Customizing Settings
 
