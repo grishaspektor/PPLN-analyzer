@@ -23,7 +23,7 @@
 ## Overview
 
 PPLN Analyzer is a Python-based application designed to automate the analysis of periodically poled lithium niobate (PPLN) structures. It provides tools for rotating images, selecting regions of interest (ROI), analyzing poling patterns, and saving results for further study. This tool is particularly useful for researchers and engineers working in the field of nonlinear optics and photonics.
-
+![Screenshot 1](./images/screenshot.png)
 ## Features
 
 - **Automatic and Manual Image Rotation**: Aligns images to make the poling patterns vertical.
