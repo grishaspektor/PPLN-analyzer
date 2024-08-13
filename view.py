@@ -74,7 +74,6 @@ class ImageView:
         self.analyze_poling_button.pack(side=tk.LEFT)
         
 
-
         # Frame to hold checkboxes and nominal period text box horizontally
         self.settings_frame = tk.Frame(root)
         self.settings_frame.pack()
@@ -132,6 +131,10 @@ class ImageView:
         self.rotation_entry = tk.Entry(self.rotation_frame, width=5)
         self.rotation_entry.pack(side=tk.LEFT)
         self.rotation_entry.bind("<Return>", self.controller.update_rotation_slider)
+        
+        # Add the button for auto-rotation
+        self.auto_rotate_button = tk.Button(self.rotation_frame, text="Auto Rotate", command=self.controller.auto_rotate_image)
+        self.auto_rotate_button.pack(side=tk.LEFT, padx=10)
 
         # # Add a save button at the bottom right
         # self.save_button = tk.Button(root, text="Save Results", command=self.controller.save_results)

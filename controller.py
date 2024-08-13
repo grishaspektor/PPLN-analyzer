@@ -6,6 +6,7 @@ import os
 from scipy.signal import find_peaks
 from datetime import datetime
 import configparser
+from skimage import io, color, feature, transform
 
 
 class ImageController:
@@ -415,3 +416,45 @@ class ImageController:
             writer.writerow(data)
         
         print("Results saved to", self.csv_file)
+ 
+    def auto_rotate_image(self):
+        # Convert the original image to a NumPy array
+        image_array = np.array(self.model.rotated_image)
+        
+        # Check if the image is already grayscale
+        if image_array.ndim == 2:  # Image is already grayscale
+            gray_image = image_array
+        else:
+            gray_image = color.rgb2gray(image_array)
+        
+        # Use Canny edge detection
+        edges = feature.canny(gray_image, sigma=2.0)
+        
+        # Perform Hough transform to detect lines
+        hough_lines = transform.probabilistic_hough_line(edges, threshold=10, line_length=100, line_gap=3)
+        
+        # Calculate angles of the lines
+        angles = []
+        for line in hough_lines:
+            p0, p1 = line
+            angle = np.degrees(np.arctan2(p1[1] - p0[1], p1[0] - p0[0]))
+            angles.append(angle)
+        
+        # Normalize angles to the [-45, 45] range
+        angles = [angle - 90 if angle > 45 else angle + 90 if angle < -45 else angle for angle in angles]
+        
+        # Compute the median angle
+        if angles:
+            median_angle = np.median(angles)
+        else:
+            median_angle = 0
+        
+        # Update the rotation angle and trigger the update
+        self.rotation_angle = median_angle
+        self.view.update_rotation_entry(median_angle)
+        
+        # Synchronize the slider with the textbox
+        self.view.rotation_slider.set(median_angle)
+        
+        self.rotate_image(median_angle)
+    
