@@ -14,7 +14,7 @@ class ImageController:
         self.model = model
         self.view = view
         self.calibration_region = []
-        self.prominence_value = 10  # Initial prominence value, adjust as needed
+        self.prominence_value = 5  # Initial prominence value, adjust as needed
         self.calibration_factor = None  # Store the calibration factor
         self.profile_region = []
         self.line_profile = None  # Store the line profile for analysis
@@ -25,6 +25,8 @@ class ImageController:
         self.image_dir = None  # Directory where the image is located
         self.config_file = "config.ini"  # Configuration file to store settings
         self.csv_file = self.load_database_location()  # Load the stored database location
+        self.calibration_minima = []
+        self.minimum_threshold_distance = 20 # for downselecting the minima from the calibration stage to be close to the global minimum within 20 grey levels.
 
     
     def load_database_location(self):
@@ -302,12 +304,13 @@ class ImageController:
         end_exclusion = int(self.view.end_exclusion_entry.get())
 
         calibration_data = np.mean(np.array(self.model.rotated_image)[scaled_y1:scaled_y2, start_exclusion:-end_exclusion], axis=0)
-        self.plot_calibration_data(calibration_data)
         self.calculate_calibration_factor(calibration_data)
+        self.plot_calibration_data(calibration_data)
 
     def plot_calibration_data(self, calibration_data):
         min_value = np.min(calibration_data)
-        minima_indices, properties = find_peaks(-calibration_data, prominence=self.prominence_value)
+        # minima_indices, properties = find_peaks(-calibration_data, prominence=self.prominence_value)
+        minima_indices = self.calibration_minima
 
         plt.figure()
         plt.plot(calibration_data, label="Calibration Profile")
@@ -319,13 +322,44 @@ class ImageController:
         plt.legend()
         plt.show()
 
+    # def calculate_calibration_factor(self, calibration_data):
+    #     nominal_period = float(self.view.nominal_period_entry.get())
+    #     minima_indices, properties = find_peaks(-calibration_data, prominence=self.prominence_value)
+    #     num_periods = len(minima_indices) - 1
+    #     if num_periods > 0:
+    #         total_pixels = minima_indices[-1] - minima_indices[0]
+    #         calibration_factor = (nominal_period * num_periods) / total_pixels
+    #         self.calibration_factor = calibration_factor  # Store the calibration factor
+    #         self.view.calibration_factor_value.set(f"{calibration_factor:.6f}")
+    #         print(f"Calibration factor calculated: {calibration_factor:.6f} microns/pixel")
+    #     else:
+    #         self.calibration_factor = None
+    #         self.view.calibration_factor_value.set("N/A")
+    #         print("Insufficient number of periods detected for calibration.")
+
     def calculate_calibration_factor(self, calibration_data):
         nominal_period = float(self.view.nominal_period_entry.get())
+        
+        # Find all minima
         minima_indices, properties = find_peaks(-calibration_data, prominence=self.prominence_value)
-        num_periods = len(minima_indices) - 1
+        
+        # Find the global minimum of the calibration data
+        global_min = np.min(calibration_data)
+        
+        # Define a threshold distance (you can adjust this value)
+        threshold_distance = self.minimum_threshold_distance  # Example: 10 pixels
+        
+        # Down-select minima that are within the threshold distance from the global minimum
+        filtered_minima_indices = [
+            idx for idx in minima_indices 
+            if abs(calibration_data[idx] - global_min) <= threshold_distance
+        ]
+        
+        num_periods = len(filtered_minima_indices) - 1
         if num_periods > 0:
-            total_pixels = minima_indices[-1] - minima_indices[0]
+            total_pixels = filtered_minima_indices[-1] - filtered_minima_indices[0]
             calibration_factor = (nominal_period * num_periods) / total_pixels
+            self.calibration_minima = filtered_minima_indices
             self.calibration_factor = calibration_factor  # Store the calibration factor
             self.view.calibration_factor_value.set(f"{calibration_factor:.6f}")
             print(f"Calibration factor calculated: {calibration_factor:.6f} microns/pixel")
